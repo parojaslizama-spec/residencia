@@ -39,6 +39,7 @@ button.secundario { background: none; border: 1px solid var(--borde); color: var
 button.peligro { background: none; border: 1px solid var(--peligro); color: var(--peligro); padding: 6px 10px; border-radius: 8px; cursor: pointer; font: inherit; }
 table { width: 100%; border-collapse: collapse; font-size: .92rem; }
 th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+td.nombre-archivo { word-break: break-all; min-width: 110px; }
 .acciones { white-space: nowrap; display: flex; gap: 6px; flex-wrap: wrap; }
 .tabla-scroll { overflow-x: auto; }
 .nota { color: var(--suave); font-size: .85rem; }
@@ -149,7 +150,7 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--bord
     <div class="aviso-error" id="error-archivos"></div>
     <div class="tabla-scroll">
       <table>
-        <thead><tr><th>Archivo</th><th>Tipo</th><th>Tamaño</th><th>Modificado</th><th></th></tr></thead>
+        <thead><tr><th>Archivo</th><th>Tipo</th><th>Tamaño</th><th>Modificado</th></tr></thead>
         <tbody id="tabla-archivos"></tbody>
       </table>
     </div>
@@ -304,12 +305,12 @@ async function cargarArchivos() {
     const archivos = await api("/api/archivos");
     $("#tabla-archivos").innerHTML = archivos.length ? archivos.map((a) => `
       <tr>
-        <td>${esc(a.ruta)}</td>
+        <td class="nombre-archivo">${esc(a.ruta)}
+          <div>${a.legible ? `<button class="secundario" data-ver="${esc(a.ruta)}">Ver texto</button>` : `<span class="nota">No legible</span>`}</div></td>
         <td>${esc(a.tipo)}</td>
         <td>${tamano(a.tamano)}</td>
         <td>${esc(a.modificado)}</td>
-        <td>${a.legible ? `<button class="secundario" data-ver="${esc(a.ruta)}">Ver texto</button>` : `<span class="nota">No legible</span>`}</td>
-      </tr>`).join("") : `<tr><td colspan="5" class="nota">La carpeta no tiene archivos.</td></tr>`;
+      </tr>`).join("") : `<tr><td colspan="4" class="nota">La carpeta no tiene archivos.</td></tr>`;
   } catch (err) {
     $("#tabla-archivos").innerHTML = "";
     $("#error-archivos").textContent = err.message;
