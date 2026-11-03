@@ -53,6 +53,7 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--bord
   <button class="activo" data-tab="personal">Personal</button>
   <button data-tab="costos">Costos de despido</button>
   <button data-tab="documentos">Documentos</button>
+  <button data-tab="archivos">Archivos</button>
   <button data-tab="proximas">Próximamente</button>
 </nav>
 <main>
@@ -137,6 +138,26 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--bord
         <tbody id="tabla-documentos"></tbody>
       </table>
     </div>
+  </div>
+</section>
+
+<section id="archivos">
+  <div class="tarjeta">
+    <h2>Archivos de la carpeta local</h2>
+    <p class="nota">Solo lectura. Los archivos se leen desde la carpeta configurada en ASISTENTE_CARPETA_DOCUMENTOS.</p>
+    <button class="secundario" id="recargar-archivos">Actualizar lista</button>
+    <div class="aviso-error" id="error-archivos"></div>
+    <div class="tabla-scroll">
+      <table>
+        <thead><tr><th>Archivo</th><th>Tipo</th><th>Tamaño</th><th>Modificado</th><th></th></tr></thead>
+        <tbody id="tabla-archivos"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="tarjeta" id="visor" hidden>
+    <h2 id="visor-titulo"></h2>
+    <pre id="visor-texto" style="white-space:pre-wrap;word-break:break-word;font:inherit;max-height:60vh;overflow:auto"></pre>
+    <button class="secundario" id="cerrar-visor">Cerrar</button>
   </div>
 </section>
 
@@ -274,6 +295,45 @@ $("#form-documento").addEventListener("submit", async (e) => {
     $("#error-documento").textContent = err.message;
   }
 });
+
+const tamano = (b) => b < 1024 ? b + " B" : b < 1048576 ? (b / 1024).toFixed(0) + " KB" : (b / 1048576).toFixed(1) + " MB";
+
+async function cargarArchivos() {
+  $("#error-archivos").textContent = "";
+  try {
+    const archivos = await api("/api/archivos");
+    $("#tabla-archivos").innerHTML = archivos.length ? archivos.map((a) => `
+      <tr>
+        <td>${esc(a.ruta)}</td>
+        <td>${esc(a.tipo)}</td>
+        <td>${tamano(a.tamano)}</td>
+        <td>${esc(a.modificado)}</td>
+        <td>${a.legible ? `<button class="secundario" data-ver="${esc(a.ruta)}">Ver texto</button>` : `<span class="nota">No legible</span>`}</td>
+      </tr>`).join("") : `<tr><td colspan="5" class="nota">La carpeta no tiene archivos.</td></tr>`;
+  } catch (err) {
+    $("#tabla-archivos").innerHTML = "";
+    $("#error-archivos").textContent = err.message;
+  }
+}
+
+$("#recargar-archivos").addEventListener("click", cargarArchivos);
+$("#cerrar-visor").addEventListener("click", () => { $("#visor").hidden = true; });
+
+$("#tabla-archivos").addEventListener("click", async (e) => {
+  const ruta = e.target.dataset.ver;
+  if (!ruta) return;
+  try {
+    const r = await api(`/api/archivos/texto?ruta=${encodeURIComponent(ruta)}`);
+    $("#visor-titulo").textContent = ruta;
+    $("#visor-texto").textContent = r.texto || "(El archivo no tiene texto extraíble)";
+    $("#visor").hidden = false;
+    $("#visor").scrollIntoView({ behavior: "smooth" });
+  } catch (err) {
+    $("#error-archivos").textContent = err.message;
+  }
+});
+
+document.querySelector('nav button[data-tab="archivos"]').addEventListener("click", cargarArchivos);
 
 cargarPersonal().catch((err) => alert(err.message));
 cargarDocumentos().catch(() => {});
