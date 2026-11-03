@@ -25,9 +25,23 @@ Los datos del personal son personales y sensibles. Antes de cargar datos reales:
 1. Confirma que el repositorio sea privado, o guarda los datos fuera del repo.
 2. No subas RUT, domicilio, datos de salud ni cuentas bancarias a este repositorio.
 
-## Uso (cálculos laborales)
+## Cómo abrir la aplicación
+
+Requiere Python 3. No hay nada que instalar.
 
 ```bash
-python3 asistente-residencia/calculos/laboral.py asistente-residencia/personal/registro_plantilla.csv
+# Solo desde esta PC: http://127.0.0.1:8000
+python3 asistente-residencia/app/servidor.py
+
+# Desde el celular (misma Wi‑Fi). Define una clave antes de exponerla en la red.
+ASISTENTE_CLAVE="una-clave-larga" python3 asistente-residencia/app/servidor.py --red
+```
+
+Los datos se guardan en `asistente-residencia/datos/asistente.db`. Esa carpeta está en `.gitignore` y no se sube al repositorio.
+
+## Pruebas
+
+```bash
+python3 -m unittest discover -s asistente-residencia/app -p "test_*.py"
 python3 -m unittest discover -s asistente-residencia/calculos -p "test_*.py"
 ```

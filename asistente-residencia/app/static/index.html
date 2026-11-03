@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asistente ELEAM</title>
+<style>
+:root {
+  --fondo: #f6f7f9; --tarjeta: #ffffff; --texto: #1d2330; --suave: #5b6475;
+  --acento: #2f6fdb; --borde: #d9dde5; --peligro: #c0392b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fondo: #14181f; --tarjeta: #1d232d; --texto: #e7eaf0; --suave: #9aa4b5;
+    --acento: #6a9cf0; --borde: #323b48; --peligro: #e57373;
+  }
+}
+:root[data-theme="dark"] {
+  --fondo: #14181f; --tarjeta: #1d232d; --texto: #e7eaf0; --suave: #9aa4b5;
+  --acento: #6a9cf0; --borde: #323b48; --peligro: #e57373;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: var(--fondo); color: var(--texto); }
+header { background: var(--acento); color: #fff; padding: 14px 16px; font-weight: 600; }
+nav { display: flex; gap: 6px; overflow-x: auto; padding: 8px 12px; border-bottom: 1px solid var(--borde); background: var(--tarjeta); }
+nav button { flex: none; border: 1px solid var(--borde); background: none; color: var(--texto); padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+nav button.activo { background: var(--acento); color: #fff; border-color: var(--acento); }
+main { padding: 16px; max-width: 900px; margin: 0 auto; }
+section { display: none; }
+section.activa { display: block; }
+.tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+h2 { margin: 0 0 10px; font-size: 1.1rem; }
+label { display: block; font-size: .85rem; color: var(--suave); margin-top: 8px; }
+input, select, textarea { width: 100%; padding: 9px; margin-top: 3px; border: 1px solid var(--borde); border-radius: 8px; background: var(--fondo); color: var(--texto); font: inherit; }
+.fila { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 560px) { .fila { grid-template-columns: 1fr; } }
+button.principal { margin-top: 12px; background: var(--acento); color: #fff; border: 0; padding: 10px 16px; border-radius: 8px; cursor: pointer; font: inherit; }
+button.secundario { background: none; border: 1px solid var(--borde); color: var(--texto); padding: 6px 10px; border-radius: 8px; cursor: pointer; font: inherit; }
+button.peligro { background: none; border: 1px solid var(--peligro); color: var(--peligro); padding: 6px 10px; border-radius: 8px; cursor: pointer; font: inherit; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+.acciones { white-space: nowrap; display: flex; gap: 6px; flex-wrap: wrap; }
+.tabla-scroll { overflow-x: auto; }
+.nota { color: var(--suave); font-size: .85rem; }
+.resultado { font-size: 1.05rem; line-height: 1.7; }
+.monto { font-weight: 600; }
+.aviso-error { color: var(--peligro); margin-top: 8px; font-size: .9rem; }
+</style>
+</head>
+<body>
+<header>Asistente ELEAM</header>
+<nav>
+  <button class="activo" data-tab="personal">Personal</button>
+  <button data-tab="costos">Costos de despido</button>
+  <button data-tab="documentos">Documentos</button>
+  <button data-tab="proximas">Próximamente</button>
+</nav>
+<main>
+
+<section id="personal" class="activa">
+  <div class="tarjeta">
+    <h2 id="titulo-form">Agregar persona</h2>
+    <form id="form-personal">
+      <div class="fila">
+        <div><label>RUT o código (único)<input name="id" required></label></div>
+        <div><label>Nombre completo<input name="nombre" required></label></div>
+      </div>
+      <div class="fila">
+        <div><label>Cargo<input name="cargo" placeholder="Cuidadora, TENS, cocina…"></label></div>
+        <div><label>Tipo de contrato
+          <select name="tipo_contrato">
+            <option value="">—</option>
+            <option>Indefinido</option>
+            <option>Plazo fijo</option>
+            <option>Por obra o faena</option>
+          </select></label></div>
+      </div>
+      <div class="fila">
+        <div><label>Fecha de ingreso<input type="date" name="fecha_ingreso" required></label></div>
+        <div><label>Fecha de término (si ya terminó)<input type="date" name="fecha_termino"></label></div>
+      </div>
+      <div class="fila">
+        <div><label>Remuneración bruta mensual<input type="number" min="0" step="1" name="remuneracion_bruta"></label></div>
+        <div><label>Notas<input name="notas"></label></div>
+      </div>
+      <button class="principal" type="submit">Guardar</button>
+      <button class="secundario" type="button" id="cancelar-edicion" hidden>Cancelar edición</button>
+      <div class="aviso-error" id="error-personal"></div>
+    </form>
+  </div>
+  <div class="tarjeta">
+    <h2>Personal registrado</h2>
+    <div class="tabla-scroll">
+      <table>
+        <thead><tr><th>Nombre</th><th>Cargo</th><th>Ingreso</th><th>Contrato</th><th></th></tr></thead>
+        <tbody id="tabla-personal"></tbody>
+      </table>
+    </div>
+    <p class="nota" id="vacio-personal" hidden>Aún no hay personal registrado.</p>
+  </div>
+</section>
+
+<section id="costos">
+  <div class="tarjeta">
+    <h2>Costos de despido</h2>
+    <label>Persona
+      <select id="select-costos"></select>
+    </label>
+    <button class="principal" id="calcular">Calcular</button>
+    <div class="resultado" id="resultado-costos" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<section id="documentos">
+  <div class="tarjeta">
+    <h2>Registrar documento interno</h2>
+    <form id="form-documento">
+      <div class="fila">
+        <div><label>Número<input name="numero" required></label></div>
+        <div><label>Fecha<input type="date" name="fecha" required></label></div>
+      </div>
+      <label>Título<input name="titulo" required></label>
+      <div class="fila">
+        <div><label>Versión<input name="version" placeholder="v1"></label></div>
+        <div><label>Responsable<input name="responsable"></label></div>
+      </div>
+      <label>Ubicación del archivo<input name="ruta" placeholder="Ruta o enlace del documento"></label>
+      <button class="principal" type="submit">Registrar</button>
+      <div class="aviso-error" id="error-documento"></div>
+    </form>
+  </div>
+  <div class="tarjeta">
+    <h2>Registro de documentos</h2>
+    <div class="tabla-scroll">
+      <table>
+        <thead><tr><th>Número</th><th>Título</th><th>Fecha</th><th>Versión</th><th>Responsable</th></tr></thead>
+        <tbody id="tabla-documentos"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="proximas">
+  <div class="tarjeta">
+    <h2>Próximas fases</h2>
+    <ul>
+      <li>Presupuestos mensuales, basados en los simuladores del repo.</li>
+      <li>Plantillas de documentos con el formato de la carpeta.</li>
+      <li>Resúmenes de normativa aplicable a ELEAM (orientativos, no asesoría legal).</li>
+      <li>Consultas en lenguaje natural, si decides usar IA.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+<script>
+const $ = (sel) => document.querySelector(sel);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = (n) => "$" + Math.round(Number(n) || 0).toLocaleString("es-CL");
+let personal = [];
+let editando = null;
+
+async function api(ruta, opciones = {}) {
+  const cabeceras = { "Content-Type": "application/json", ...(sessionStorage.getItem("clave") ? { "X-Clave": sessionStorage.getItem("clave") } : {}) };
+  let r = await fetch(ruta, { ...opciones, headers: cabeceras });
+  if (r.status === 401) {
+    const clave = prompt("Clave del asistente:");
+    if (!clave) throw new Error("Clave requerida");
+    sessionStorage.setItem("clave", clave);
+    return api(ruta, opciones);
+  }
+  const datos = await r.json();
+  if (!r.ok) throw new Error(datos.error || "Error");
+  return datos;
+}
+
+function mostrarTab(nombre) {
+  document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("activo", b.dataset.tab === nombre));
+  document.querySelectorAll("section").forEach((s) => s.classList.toggle("activa", s.id === nombre));
+}
+document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => mostrarTab(b.dataset.tab)));
+
+async function cargarPersonal() {
+  personal = await api("/api/personal");
+  $("#vacio-personal").hidden = personal.length > 0;
+  $("#tabla-personal").innerHTML = personal.map((p) => `
+    <tr>
+      <td>${esc(p.nombre)}<div class="nota">${esc(p.id)}</div></td>
+      <td>${esc(p.cargo)}</td>
+      <td>${esc(p.fecha_ingreso)}</td>
+      <td>${esc(p.tipo_contrato)}</td>
+      <td class="acciones">
+        <button class="secundario" data-editar="${esc(p.id)}">Editar</button>
+        <button class="peligro" data-borrar="${esc(p.id)}">Borrar</button>
+      </td>
+    </tr>`).join("");
+  $("#select-costos").innerHTML = personal.map((p) => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join("");
+}
+
+$("#tabla-personal").addEventListener("click", async (e) => {
+  const editar = e.target.dataset.editar, borrar = e.target.dataset.borrar;
+  if (editar) {
+    const p = personal.find((x) => x.id === editar);
+    const f = $("#form-personal");
+    for (const campo of ["id", "nombre", "cargo", "fecha_ingreso", "tipo_contrato", "remuneracion_bruta", "fecha_termino", "notas"]) {
+      f.elements[campo].value = p[campo] ?? "";
+    }
+    f.elements.id.readOnly = true;
+    editando = p.id;
+    $("#titulo-form").textContent = "Editar persona";
+    $("#cancelar-edicion").hidden = false;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  if (borrar && confirm("¿Borrar este registro? No se puede deshacer.")) {
+    try { await api(`/api/personal/${encodeURIComponent(borrar)}`, { method: "DELETE" }); await cargarPersonal(); }
+    catch (err) { alert(err.message); }
+  }
+});
+
+function limpiarFormPersonal() {
+  $("#form-personal").reset();
+  $("#form-personal").elements.id.readOnly = false;
+  editando = null;
+  $("#titulo-form").textContent = "Agregar persona";
+  $("#cancelar-edicion").hidden = true;
+  $("#error-personal").textContent = "";
+}
+$("#cancelar-edicion").addEventListener("click", limpiarFormPersonal);
+
+$("#form-personal").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const datos = Object.fromEntries(new FormData(e.target));
+  try {
+    if (editando) {
+      await api(`/api/personal/${encodeURIComponent(editando)}`, { method: "PUT", body: JSON.stringify(datos) });
+    } else {
+      await api("/api/personal", { method: "POST", body: JSON.stringify(datos) });
+    }
+    limpiarFormPersonal();
+    await cargarPersonal();
+  } catch (err) {
+    $("#error-personal").textContent = err.message;
+  }
+});
+
+$("#calcular").addEventListener("click", async () => {
+  const id = $("#select-costos").value;
+  if (!id) return;
+  try {
+    const c = await api(`/api/personal/${encodeURIComponent(id)}/costos`);
+    $("#resultado-costos").innerHTML = `
+      <div>Antigüedad: <b>${esc(c.antiguedad)}</b></div>
+      <div>Indemnización por años de servicio: <span class="monto">${money(c.indemnizacion_anos_servicio)}</span></div>
+      <div>Aviso previo (si no se avisó): <span class="monto">${money(c.aviso_previo)}</span></div>
+      <div class="nota">${esc(c.nota)}</div>`;
+  } catch (err) {
+    $("#resultado-costos").textContent = err.message;
+  }
+});
+
+async function cargarDocumentos() {
+  const docs = await api("/api/documentos");
+  $("#tabla-documentos").innerHTML = docs.map((d) => `
+    <tr><td>${esc(d.numero)}</td><td>${esc(d.titulo)}</td><td>${esc(d.fecha)}</td><td>${esc(d.version)}</td><td>${esc(d.responsable)}</td></tr>`).join("");
+}
+$("#form-documento").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    await api("/api/documentos", { method: "POST", body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
+    e.target.reset();
+    $("#error-documento").textContent = "";
+    await cargarDocumentos();
+  } catch (err) {
+    $("#error-documento").textContent = err.message;
+  }
+});
+
+cargarPersonal().catch((err) => alert(err.message));
+cargarDocumentos().catch(() => {});
+</script>
+</body>
+</html>
