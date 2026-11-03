@@ -7,6 +7,8 @@ Uso:
 Variables de entorno:
     ASISTENTE_CLAVE  Si se define, la API exige esa clave (cabecera X-Clave). Recomendado con --red.
     ASISTENTE_DB     Ruta del archivo SQLite. Por defecto: asistente-residencia/datos/asistente.db
+    ASISTENTE_CARPETA_DOCUMENTOS  Carpeta local de solo lectura con documentos (Word, PDF, texto).
+                                  Ejemplo Windows: C:\\Users\\Hardk\\ELAM
 """
 
 import argparse
@@ -25,11 +27,14 @@ sys.path.insert(0, str(RAIZ))
 sys.path.insert(0, str(RAIZ.parent / "calculos"))
 
 import db  # noqa: E402
+import documentos_locales  # noqa: E402
 from laboral import aviso_previo, anos_servicio, indemnizacion_anos_servicio  # noqa: E402
+from urllib.parse import parse_qs  # noqa: E402
 
 ESTATICO = RAIZ / "static" / "index.html"
 RUTA_DB = Path(os.environ.get("ASISTENTE_DB", RAIZ.parent / "datos" / "asistente.db"))
 CLAVE = os.environ.get("ASISTENTE_CLAVE", "")
+CARPETA_DOCUMENTOS = os.environ.get("ASISTENTE_CARPETA_DOCUMENTOS", "")
 TAMANO_MAXIMO = 1_000_000
 
 
@@ -47,11 +52,22 @@ def costos_despido(persona: dict, hoy: date | None = None) -> dict:
     }
 
 
-def rutas_api(con, metodo: str, ruta: str, leer) -> tuple[int, object]:
+def rutas_api(con, metodo: str, ruta: str, leer, consulta: dict | None = None) -> tuple[int, object]:
     partes = ruta.strip("/").split("/")  # ["api", recurso, id?, accion?]
     if len(partes) < 2:
         return 404, {"error": "No encontrado"}
     recurso = partes[1]
+
+    if recurso == "archivos" and metodo == "GET":
+        if not CARPETA_DOCUMENTOS:
+            return 503, {"error": "Carpeta de documentos no configurada (ASISTENTE_CARPETA_DOCUMENTOS)"}
+        carpeta = Path(CARPETA_DOCUMENTOS)
+        if len(partes) == 2:
+            return 200, documentos_locales.listar(carpeta)
+        if len(partes) == 3 and partes[2] == "texto":
+            relativa = (consulta or {}).get("ruta", [""])[0]
+            return 200, {"ruta": relativa, "texto": documentos_locales.leer_texto(carpeta, relativa)}
+        return 404, {"error": "No encontrado"}
 
     if recurso == "personal":
         if len(partes) == 2:
@@ -121,9 +137,10 @@ class Manejador(BaseHTTPRequestHandler):
             return self._json(404, {"error": "No encontrado"})
         if not self._autorizado():
             return self._json(401, {"error": "Clave incorrecta"})
+        consulta = parse_qs(urlparse(self.path).query)
         con = db.conectar(RUTA_DB)
         try:
-            codigo, datos = rutas_api(con, metodo, ruta, self._leer)
+            codigo, datos = rutas_api(con, metodo, ruta, self._leer, consulta)
             self._json(codigo, datos)
         except ValueError as e:
             self._json(400, {"error": str(e)})
